@@ -1,0 +1,101 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@using WebApp.Services
+@inject CryptoService CryptoService
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">💰 Top 10 Criptomonedas</h2>
+
+    @if (cryptos is null)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando datos...</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive shadow-sm border rounded-3">
+            <table class="table table-striped table-bordered table-hover align-middle text-center mb-0">
+                <thead class="table-dark border-bottom border-2">
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th style="width:70px;">Logo</th>
+                        <th>Nombre</th>
+                        <th>Símbolo</th>
+                        <th>Precio (USD)</th>
+                        <th>Máx 1H</th>
+                        <th>Mín 1H</th>
+                        <th>Promedio 1H</th>
+                        <th>Señal</th>
+                        <th>Última actualización</th>
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider">
+                    @foreach (var (c, index) in cryptos.Select((v, i) => (v, i + 1)))
+                    {
+                        <tr class="align-middle">
+                            <td class="fw-bold">@index</td>
+                            <td>
+                                <img src="@c.ImageUrl"
+                                     alt="@c.Name"
+                                     width="40"
+                                     height="40"
+                                     class="rounded-circle border border-2 border-secondary shadow-sm" />
+                            </td>
+                            <td class="text-start fw-semibold">@c.Name</td>
+                            <td>@c.Symbol.ToUpper()</td>
+                            <td class="text-end">@c.Current.ToString("C2")</td>
+                            <td class="text-end">@c.Highest1H.ToString("C2")</td>
+                            <td class="text-end">@c.Lower1H.ToString("C2")</td>
+                            <td class="text-end">@c.Avg1H.ToString("C2")</td>
+                            <td>
+                                <span class="badge @(c.Signal == "BUY" ? "bg-success" : "bg-danger") fs-6 px-3 py-2 shadow-sm">
+                                    @c.Signal
+                                </span>
+                            </td>
+                            <td>@c.LastUpdated.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CryptoSignal>? cryptos;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7374/hubs/crypto")
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On("TopUpdated", async () =>
+        {
+            Console.WriteLine("[Blazor] Notificación recibida: TopUpdated");
+            await CargarDatos();
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task CargarDatos()
+    {
+        cryptos = await CryptoService.GetTopAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
+    }
+}
