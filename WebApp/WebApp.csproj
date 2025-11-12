@@ -12,4 +12,12 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.11" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\Assets\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\Assets\CoingeckoAPI.avif" />
+  </ItemGroup>
+
 </Project>
